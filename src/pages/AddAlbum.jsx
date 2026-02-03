@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,11 +8,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from 'sonner';
-// FIX: Changed import to lastfm
 import { searchLastFmAlbums, getLastFmAlbumDetails } from '@/lib/lastfm';
+import { useAuth } from '@/lib/AuthContext';
+import AuthDialog from '@/components/AuthDialog'; // Import AuthDialog
 
 export default function AddAlbum() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Auth Dialog State
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Check auth on mount
+  useEffect(() => {
+    if (!user) {
+      setShowAuthModal(true);
+    } else {
+      setShowAuthModal(false);
+    }
+  }, [user]);
+
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,7 +64,6 @@ export default function AddAlbum() {
   const selectAlbum = async (album) => {
     setSearching(true);
     try {
-      // Last.fm needs artist + album name to get details
       const details = await getLastFmAlbumDetails(album.artist, album.name, album.mbid);
       
       setFormData({
@@ -76,6 +90,11 @@ export default function AddAlbum() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!user) {
+        setShowAuthModal(true);
+        return;
+    }
+
     setLoading(true);
 
     try {
@@ -99,6 +118,16 @@ export default function AddAlbum() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-6 pb-20">
+      <AuthDialog 
+        open={showAuthModal} 
+        onOpenChange={(open) => {
+            setShowAuthModal(open);
+            // Optional: If they close the dialog without logging in, maybe navigate back?
+            // if (!open && !user) navigate(-1); 
+        }}
+        message="Must be logged in to add an album"
+      />
+
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Add New Album</h1>
@@ -133,11 +162,10 @@ export default function AddAlbum() {
                         <p className="text-sm text-zinc-500 mb-2">Select an album to import:</p>
                         {searchResults.map((album) => (
                             <button
-                                key={album.url} // Last.fm IDs are weird, URL is unique enough
+                                key={album.url}
                                 onClick={() => selectAlbum(album)}
                                 className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800 transition-colors text-left group"
                             >
-                                {/* Last.fm thumbnails */}
                                 {album.image && album.image[1]?.['#text'] ? (
                                    <img src={album.image[1]['#text']} alt={album.name} className="w-10 h-10 rounded shadow-sm" />
                                 ) : (
@@ -162,7 +190,7 @@ export default function AddAlbum() {
             </AnimatePresence>
         </div>
 
-        {/* --- FORM (Same as before) --- */}
+        {/* --- FORM --- */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="title">Album Title</Label>
@@ -246,9 +274,7 @@ export default function AddAlbum() {
               value={formData.tracklist}
               onChange={(e) => setFormData({ ...formData, tracklist: e.target.value })}
               className="bg-zinc-900 border-zinc-800 focus:border-violet-500 min-h-[150px] font-mono text-sm text-white"
-              placeholder="Track 1
-Track 2
-Track 3"
+              placeholder="Track 1&#10;Track 2&#10;Track 3"
             />
           </div>
 
