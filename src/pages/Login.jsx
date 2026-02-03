@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Music2, Loader2, AlertCircle, ArrowRight, Mail } from 'lucide-react';
+import { Music2, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,7 +82,7 @@ export default function Login() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-white">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                   <Input 
@@ -91,19 +91,17 @@ export default function Login() {
                     placeholder="name@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    // Added "text-white" to the className below
                     className="pl-10 bg-zinc-950 border-zinc-800 focus:border-violet-500 text-white"
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password" className="text-white">Password</Label>
                 <Input 
                   id="password" 
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  // Added "text-white" to the className below
                   className="bg-zinc-950 border-zinc-800 focus:border-violet-500 text-white"
                 />
               </div>
