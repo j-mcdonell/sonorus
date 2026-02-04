@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { User, Camera, Loader2 } from 'lucide-react';
@@ -6,20 +6,18 @@ import { toast } from 'sonner';
 
 export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null); // Use Ref to trigger input manually
 
-  const uploadAvatar = async (event) => {
+  const handleFileSelect = async (event) => {
     try {
       setUploading(true);
 
       if (!event.target.files || event.target.files.length === 0) {
-        // User cancelled selection
         return;
       }
 
       const file = event.target.files[0];
-      
-      // BEST PRACTICE: Client-side validation (e.g., 2MB limit)
-      const fileSizeLimit = 2 * 1024 * 1024; 
+      const fileSizeLimit = 2 * 1024 * 1024; // 2MB
       
       if (file.size > fileSizeLimit) {
         throw new Error('Image must be less than 2MB.');
@@ -34,9 +32,7 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
         .from('avatars')
         .upload(filePath, file);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       // 2. Get Public URL
       const { data: { publicUrl } } = supabase.storage
@@ -48,9 +44,7 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
         data: { avatar_url: publicUrl }
       });
 
-      if (updateUserError) {
-        throw updateUserError;
-      }
+      if (updateUserError) throw updateUserError;
 
       toast.success('Avatar updated!');
       if (onUpload) onUpload(); 
@@ -59,46 +53,53 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
       toast.error(error.message);
     } finally {
       setUploading(false);
+      // Reset input value to allow selecting the same file again if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const triggerUpload = () => {
+    if (!uploading && fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
   return (
-    <div className="relative group">
-      <label 
-        htmlFor="avatar-upload" 
-        className="relative flex cursor-pointer transition-all active:scale-95"
-        style={{ width: size, height: size }}
-      >
-        {/* Main Avatar Image */}
-        <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-950 group-hover:ring-zinc-800 transition-all">
-          <AvatarImage src={url} className="object-cover" />
-          <AvatarFallback className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-             <User className="w-10 h-10 text-white" />
-          </AvatarFallback>
-        </Avatar>
+    <div 
+      className="relative group cursor-pointer" 
+      style={{ width: size, height: size }}
+      onClick={triggerUpload} // Clicking anywhere on the avatar triggers upload
+    >
+      <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-950 group-hover:ring-zinc-800 transition-all">
+        <AvatarImage src={url} className="object-cover" />
+        <AvatarFallback className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
+            <User className="w-10 h-10 text-white" />
+        </AvatarFallback>
+      </Avatar>
 
-        {/* Loading Overlay (Only visible when uploading) */}
-        {uploading && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
-             <Loader2 className="w-8 h-8 text-white animate-spin" />
-          </div>
-        )}
+      {/* Loading Overlay */}
+      {uploading && (
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+        </div>
+      )}
 
-        {/* Camera Badge (Always visible when not uploading) */}
-        {!uploading && (
-          <div className="absolute bottom-0 right-0 z-10 bg-zinc-800 hover:bg-violet-600 text-zinc-200 hover:text-white border-[3px] border-zinc-950 p-2 rounded-full shadow-lg transition-colors">
-            <Camera className="w-4 h-4" />
-          </div>
-        )}
-      </label>
+      {/* Camera Badge - High Contrast & Forced Z-Index */}
+      {!uploading && (
+        <div className="absolute -bottom-1 -right-1 z-50 bg-white text-zinc-900 border-[3px] border-zinc-950 p-2 rounded-full shadow-lg group-hover:bg-zinc-200 transition-colors">
+          <Camera className="w-4 h-4" />
+        </div>
+      )}
       
       <input
+        ref={fileInputRef}
         type="file"
-        id="avatar-upload"
         accept="image/*"
-        onChange={uploadAvatar}
+        onChange={handleFileSelect}
         disabled={uploading}
-        className="hidden"
+        className="hidden" // Hidden but triggered by ref
       />
     </div>
   );
