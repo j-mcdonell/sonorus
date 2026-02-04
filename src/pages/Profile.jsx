@@ -9,11 +9,13 @@ import { User, Star, Music, TrendingUp, Calendar, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import ReviewCard from '@/components/ReviewCard';
 import AlbumCard from '@/components/AlbumCard';
+import AvatarUpload from '@/components/AvatarUpload'; // Import the new component
 
 export default function Profile() {
-  const { user } = useContext(AuthContext);
+  const { user, checkUserAuth } = useContext(AuthContext); // Get checkUserAuth to refresh profile
 
-  // 1. Fetch User's Reviews
+  // ... (Existing Review and Album queries remain unchanged) ...
+  // 1. Fetch User's Reviews...
   const { data: reviews = [], isLoading: reviewsLoading } = useQuery({
     queryKey: ['my-reviews', user?.email],
     queryFn: async () => {
@@ -29,8 +31,6 @@ export default function Profile() {
     enabled: !!user?.email
   });
 
-  // 2. Fetch Albums associated with those reviews
-  // We extract unique album IDs to fetch only what we need
   const albumIds = useMemo(() => [...new Set(reviews.map(r => r.album_id))], [reviews]);
   
   const { data: albums = [], isLoading: albumsLoading } = useQuery({
@@ -47,7 +47,6 @@ export default function Profile() {
     enabled: albumIds.length > 0
   });
 
-  // Create a map for easy lookup (Album ID -> Album Data)
   const albumMap = useMemo(() => {
     return albums.reduce((acc, album) => {
         acc[album.id] = album;
@@ -55,12 +54,10 @@ export default function Profile() {
     }, {});
   }, [albums]);
 
-  // Combine Reviews with their Album data
   const reviewsWithAlbums = useMemo(() => {
     return reviews.map(r => ({ ...r, album: albumMap[r.album_id] })).filter(r => r.album);
   }, [reviews, albumMap]);
 
-  // Calculate Stats
   const stats = useMemo(() => {
     const totalReviews = reviews.length;
     const avgRating = totalReviews > 0 
@@ -69,13 +66,13 @@ export default function Profile() {
     return { totalReviews, avgRating };
   }, [reviews]);
 
-  // "Favorites" = User's highest rated reviews (Top 4)
   const favoriteReviews = useMemo(() => {
     return [...reviewsWithAlbums]
         .sort((a, b) => b.rating - a.rating)
         .slice(0, 4); 
   }, [reviewsWithAlbums]);
 
+  // ... (Existing Auth check and Loading states remain unchanged) ...
   if (!user) {
     return (
         <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center text-white p-4">
@@ -101,15 +98,20 @@ export default function Profile() {
         <div className="absolute inset-0 bg-gradient-to-b from-violet-900/10 to-transparent" />
         <div className="relative max-w-5xl mx-auto px-6 py-12">
             <div className="flex flex-col md:flex-row items-center gap-8">
-                {/* Avatar */}
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-2xl ring-4 ring-zinc-950">
-                    <User className="w-10 h-10 text-white" />
-                </div>
+                
+                {/* REPLACED: Static div with AvatarUpload component */}
+                <AvatarUpload 
+                    uid={user.id}
+                    url={user.user_metadata?.avatar_url}
+                    onUpload={checkUserAuth}
+                    size={96} // 24 * 4px = 96px
+                />
                 
                 {/* User Info */}
                 <div className="text-center md:text-left flex-1">
                     <h1 className="text-3xl font-bold mb-1 text-white">
-                        {user.email.split('@')[0]}
+                        {/* Use display name if available, fallback to email prefix */}
+                        {user.user_metadata?.full_name || user.email.split('@')[0]}
                     </h1>
                     <p className="text-zinc-400 text-sm mb-6">{user.email}</p>
                     
@@ -133,7 +135,7 @@ export default function Profile() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-12">
-        {/* Section: Your Top Picks */}
+        {/* ... (Rest of the component remains exactly the same) ... */}
         {favoriteReviews.length > 0 && (
             <motion.section 
                 initial={{ opacity: 0, y: 20 }}
