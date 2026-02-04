@@ -65,4 +65,99 @@ export default function Layout({ children }) {
                 </Link>
               ))}
 
-              {/* Auth Button (Desktop
+              {/* Auth Button (Desktop) */}
+              <div className="ml-2 pl-2 border-l border-zinc-800">
+                {user ? (
+                   <div className="flex items-center gap-2">
+                      <Link to={createPageUrl('Profile')}>
+                        <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white hover:bg-zinc-800">
+                          <User className="w-5 h-5" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={handleLogout}
+                        className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+                      >
+                        <LogOut className="w-5 h-5" />
+                      </Button>
+                   </div>
+                ) : (
+                  <Link to={createPageUrl('Login')}>
+                    <Button className="bg-violet-600 hover:bg-violet-700 text-white h-9 px-4">
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Sign In
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile Menu */}
+            <div className="md:hidden flex items-center gap-4">
+               {user ? (
+                  <Link to={createPageUrl('Profile')}>
+                    <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center">
+                      <span className="text-xs font-bold text-white">
+                        {user.email.substring(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                  </Link>
+               ) : (
+                  <Link to={createPageUrl('Login')}>
+                    <Button size="sm" className="bg-violet-600">Sign In</Button>
+                  </Link>
+               )}
+
+               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-zinc-400">
+                      <Menu className="w-6 h-6" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="bg-zinc-950 border-zinc-800">
+                    <div className="flex flex-col gap-4 mt-8">
+                      {navItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={createPageUrl(item.path)}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-4 px-4 py-3 rounded-xl text-lg font-medium transition-all ${
+                            isActive(item.path)
+                              ? 'bg-violet-500/20 text-violet-400'
+                              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                          }`}
+                        >
+                          <item.icon className="w-5 h-5" />
+                          {item.name}
+                        </Link>
+                      ))}
+                      {user && (
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            setMobileMenuOpen(false);
+                          }}
+                          className="flex items-center gap-4 px-4 py-3 rounded-xl text-lg font-medium text-red-400 hover:bg-red-950/30 transition-all text-left w-full"
+                        >
+                          <LogOut className="w-5 h-5" />
+                          Sign Out
+                        </button>
+                      )}
+                    </div>
+                  </SheetContent>
+               </Sheet>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <main className="relative z-0">
+        {children}
+      </main>
+
+      <Toaster />
+    </div>
+  );
+}
