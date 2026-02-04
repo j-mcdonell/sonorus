@@ -12,13 +12,13 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
       setUploading(true);
 
       if (!event.target.files || event.target.files.length === 0) {
-        throw new Error('You must select an image to upload.');
+        // User cancelled selection
+        return;
       }
 
       const file = event.target.files[0];
       
       // BEST PRACTICE: Client-side validation (e.g., 2MB limit)
-      // 2MB = 2 * 1024 * 1024 bytes
       const fileSizeLimit = 2 * 1024 * 1024; 
       
       if (file.size > fileSizeLimit) {
@@ -66,27 +66,30 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
     <div className="relative group">
       <label 
         htmlFor="avatar-upload" 
-        className={`
-          relative flex items-center justify-center rounded-full overflow-hidden 
-          cursor-pointer shadow-2xl ring-4 ring-zinc-950 transition-all
-          group-hover:ring-violet-500/50
-        `}
+        className="relative flex cursor-pointer transition-all active:scale-95"
         style={{ width: size, height: size }}
       >
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            {uploading ? (
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
-            ) : (
-                <Camera className="w-6 h-6 text-white" />
-            )}
-        </div>
-
-        <Avatar className="w-full h-full">
+        {/* Main Avatar Image */}
+        <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-950 group-hover:ring-zinc-800 transition-all">
           <AvatarImage src={url} className="object-cover" />
           <AvatarFallback className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
              <User className="w-10 h-10 text-white" />
           </AvatarFallback>
         </Avatar>
+
+        {/* Loading Overlay (Only visible when uploading) */}
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
+             <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+        )}
+
+        {/* Camera Badge (Always visible when not uploading) */}
+        {!uploading && (
+          <div className="absolute bottom-0 right-0 z-10 bg-zinc-800 hover:bg-violet-600 text-zinc-200 hover:text-white border-[3px] border-zinc-950 p-2 rounded-full shadow-lg transition-colors">
+            <Camera className="w-4 h-4" />
+          </div>
+        )}
       </label>
       
       <input
