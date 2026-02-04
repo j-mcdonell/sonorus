@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { User, Camera, Loader2 } from 'lucide-react';
+import { User, Camera, Loader2, Upload } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 
 export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null); // Use Ref to trigger input manually
+  const fileInputRef = useRef(null);
 
   const handleFileSelect = async (event) => {
     try {
@@ -50,10 +51,10 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
       if (onUpload) onUpload(); 
 
     } catch (error) {
-      toast.error(error.message);
+      console.error(error);
+      toast.error(error.message || "Upload failed");
     } finally {
       setUploading(false);
-      // Reset input value to allow selecting the same file again if needed
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -67,39 +68,55 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
   };
 
   return (
-    <div 
-      className="relative group cursor-pointer" 
-      style={{ width: size, height: size }}
-      onClick={triggerUpload} // Clicking anywhere on the avatar triggers upload
-    >
-      <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-950 group-hover:ring-zinc-800 transition-all">
-        <AvatarImage src={url} className="object-cover" />
-        <AvatarFallback className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-            <User className="w-10 h-10 text-white" />
-        </AvatarFallback>
-      </Avatar>
+    <div className="flex flex-col items-center gap-3">
+      {/* 1. The Avatar Circle */}
+      <div 
+        className="relative group cursor-pointer" 
+        style={{ width: size, height: size }}
+        onClick={triggerUpload}
+      >
+        <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-950 group-hover:ring-zinc-800 transition-all">
+          <AvatarImage src={url} className="object-cover" />
+          <AvatarFallback className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
+              <User className="w-10 h-10 text-white" />
+          </AvatarFallback>
+        </Avatar>
 
-      {/* Loading Overlay */}
-      {uploading && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
-            <Loader2 className="w-8 h-8 text-white animate-spin" />
-        </div>
-      )}
+        {/* Loading Overlay */}
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
+              <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+        )}
 
-      {/* Camera Badge - High Contrast & Forced Z-Index */}
-      {!uploading && (
-        <div className="absolute -bottom-1 -right-1 z-50 bg-white text-zinc-900 border-[3px] border-zinc-950 p-2 rounded-full shadow-lg group-hover:bg-zinc-200 transition-colors">
-          <Camera className="w-4 h-4" />
-        </div>
-      )}
+        {/* Camera Badge (Corner Icon) */}
+        {!uploading && (
+          <div className="absolute -bottom-1 -right-1 z-50 bg-white text-zinc-900 border-[3px] border-zinc-950 p-2 rounded-full shadow-lg group-hover:bg-zinc-200 transition-colors">
+            <Camera className="w-4 h-4" />
+          </div>
+        )}
+      </div>
+
+      {/* 2. EXPLICIT Text Button (Fallback) */}
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={triggerUpload} 
+        disabled={uploading}
+        className="h-8 text-xs border-zinc-700 hover:bg-zinc-800 hover:text-white"
+      >
+        <Upload className="w-3 h-3 mr-2" />
+        {uploading ? 'Uploading...' : 'Change Photo'}
+      </Button>
       
+      {/* Hidden Input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         onChange={handleFileSelect}
         disabled={uploading}
-        className="hidden" // Hidden but triggered by ref
+        className="hidden" 
       />
     </div>
   );
