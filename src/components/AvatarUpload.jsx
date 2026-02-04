@@ -1,122 +1,132 @@
 import React, { useState, useRef } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { User, Camera, Loader2, Upload } from 'lucide-react';
-import { Button } from "@/components/ui/button";
+import { User, Loader2, Camera, UploadCloud } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * AvatarUpload Component
+ * * Implements a "Proxy Click" pattern where a visible, styled container
+ * triggers a hidden file input.
+ * * STYLE NOTE: We use explicit 'bg-white' and 'text-black' to prevent 
+ * global theme variables from making this button invisible in dark mode.
+ */
 export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
+  // 1. Handling the File Selection
   const handleFileSelect = async (event) => {
     try {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      // Validate File Size (Strict 2MB limit for performance)
+      if (file.size > 2 * 1024 * 1024) {
+        throw new Error('Image must be smaller than 2MB.');
+      }
+
       setUploading(true);
 
-      if (!event.target.files || event.target.files.length === 0) {
-        return;
-      }
-
-      const file = event.target.files[0];
-      const fileSizeLimit = 2 * 1024 * 1024; // 2MB
-      
-      if (file.size > fileSizeLimit) {
-        throw new Error('Image must be less than 2MB.');
-      }
-
+      // Generate a clean file path
       const fileExt = file.name.split('.').pop();
-      const fileName = `${uid}-${Math.random()}.${fileExt}`;
+      const fileName = `${uid}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // 1. Upload to Supabase Storage
+      // 2. Upload to Supabase Storage ('avatars' bucket)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // 2. Get Public URL
+      // 3. Retrieve the Public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // 3. Update User Metadata
+      // 4. Update the Auth User's Metadata
       const { error: updateUserError } = await supabase.auth.updateUser({
         data: { avatar_url: publicUrl }
       });
 
       if (updateUserError) throw updateUserError;
 
-      toast.success('Avatar updated!');
-      if (onUpload) onUpload(); 
+      // Success Sequence
+      toast.success('Profile image updated successfully');
+      if (onUpload) onUpload(); // Trigger parent refresh
 
     } catch (error) {
-      console.error(error);
-      toast.error(error.message || "Upload failed");
+      console.error('Upload failed:', error);
+      toast.error(error.message || 'Failed to upload image');
     } finally {
       setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      // Reset input so the same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const triggerUpload = () => {
+  // 2. The "Proxy" Trigger
+  // This allows us to use any custom UI to trigger the native file picker
+  const triggerFilePicker = () => {
     if (!uploading && fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* 1. The Avatar Circle */}
+    <div className="flex flex-col items-center gap-4 group">
+      {/* Visual Avatar Container */}
       <div 
-        className="relative group cursor-pointer" 
+        className="relative cursor-pointer transition-transform active:scale-95"
         style={{ width: size, height: size }}
-        onClick={triggerUpload}
+        onClick={triggerFilePicker}
       >
-        <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-950 group-hover:ring-zinc-800 transition-all">
+        <Avatar className="w-full h-full shadow-2xl ring-4 ring-zinc-900 group-hover:ring-zinc-700 transition-all">
           <AvatarImage src={url} className="object-cover" />
-          <AvatarFallback className="w-full h-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-              <User className="w-10 h-10 text-white" />
+          <AvatarFallback className="w-full h-full bg-zinc-800 flex items-center justify-center">
+            <User className="w-10 h-10 text-zinc-500" />
           </AvatarFallback>
         </Avatar>
 
         {/* Loading Overlay */}
         {uploading && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-full z-20">
-              <Loader2 className="w-8 h-8 text-white animate-spin" />
+          <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center z-20 backdrop-blur-sm">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
           </div>
         )}
 
-        {/* Camera Badge */}
+        {/* Edit Icon Badge (Always Visible) */}
         {!uploading && (
-          <div className="absolute -bottom-1 -right-1 z-50 bg-white text-zinc-900 border-[3px] border-zinc-950 p-2 rounded-full shadow-lg group-hover:bg-zinc-200 transition-colors">
+          <div className="absolute bottom-0 right-0 z-10 bg-white text-black border-4 border-zinc-950 p-2 rounded-full shadow-lg transform translate-x-1 translate-y-1 group-hover:scale-110 transition-all">
             <Camera className="w-4 h-4" />
           </div>
         )}
       </div>
 
-      {/* 2. EXPLICIT Text Button (High Contrast) */}
-      <Button 
+      {/* Explicit 'High Contrast' Button 
+        We use a standard HTML button with Tailwind classes to bypass 
+        potential shadcn/ui variable conflicts.
+      */}
+      <button 
         type="button"
-        onClick={triggerUpload} 
+        onClick={triggerFilePicker}
         disabled={uploading}
-        // FORCED STYLING: bg-zinc-800 and text-white ensures visibility regardless of theme
-        className="h-9 px-4 text-xs font-medium bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700 rounded-full transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-semibold rounded-full transition-colors border border-zinc-700"
       >
-        <Upload className="w-3 h-3 mr-2" />
+        <UploadCloud className="w-3.5 h-3.5" />
         {uploading ? 'Uploading...' : 'Change Photo'}
-      </Button>
-      
-      {/* Hidden Input */}
+      </button>
+
+      {/* Hidden Native Input */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/png, image/jpeg, image/webp"
         onChange={handleFileSelect}
         disabled={uploading}
         className="hidden" 
+        aria-hidden="true"
       />
     </div>
   );
