@@ -89,7 +89,7 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
           </div>
         )}
 
-        {/* Camera Badge (Corner Icon) */}
+        {/* Camera Badge */}
         {!uploading && (
           <div className="absolute -bottom-1 -right-1 z-50 bg-white text-zinc-900 border-[3px] border-zinc-950 p-2 rounded-full shadow-lg group-hover:bg-zinc-200 transition-colors">
             <Camera className="w-4 h-4" />
@@ -97,13 +97,13 @@ export default function AvatarUpload({ uid, url, onUpload, size = 96 }) {
         )}
       </div>
 
-      {/* 2. EXPLICIT Text Button (Fallback) */}
+      {/* 2. EXPLICIT Text Button (High Contrast) */}
       <Button 
-        variant="outline" 
-        size="sm" 
+        type="button"
         onClick={triggerUpload} 
         disabled={uploading}
-        className="h-8 text-xs border-zinc-700 hover:bg-zinc-800 hover:text-white"
+        // FORCED STYLING: bg-zinc-800 and text-white ensures visibility regardless of theme
+        className="h-9 px-4 text-xs font-medium bg-zinc-800 text-white hover:bg-zinc-700 border border-zinc-700 rounded-full transition-colors"
       >
         <Upload className="w-3 h-3 mr-2" />
         {uploading ? 'Uploading...' : 'Change Photo'}
